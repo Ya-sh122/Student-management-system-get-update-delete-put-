@@ -1,83 +1,91 @@
 const db = require('../utils/db-connection');
-
-const addStudent=(req,res)=>{
-    const {name, email, age} = req.body;
-    const query = "INSERT INTO students (name, email, age) VALUES (?,?,?)";
+const Student = require('../models/students');
+const IdentityCard  = require('../models/identitycard');
 
 
-    db.execute(query,[email,name,age], (err,result)=>{
-        if (err) return res.status(500).json(err);
+//ADD students - POST
+const addStudent= async(req,res)=>{
+   try{
+        const {name, email}= req.body;
+        const student = await Student.create({
+            name:name,
+            email:email
+        });
 
-        console.log("Inserted:", result.insertId);
-        res.send("Student added successfully");
-    })
+        res.status(201).send(`User with name: ${name} is created!`)
+
+   }catch(error){
+        res.status(500).send('Unable to make an entry.');
+   }
+}
+
+const addingValueToStudentAndIdentityTable= async(req,res)=>{
+    try{
+        const student = await Student.create(req.body.student);
+        const idCard = await IdentityCard.create({
+            ...req.body.IdentityCard,
+            StudentId:student.id
+        })
+        
+        res.status(201).json({student,idCard});
+
+    }catch(error){
+        res.status(500).json({error:error.message});
+    }
 }
 
 
-// GET ALL STUDENTS
-const getEntries= (req, res) => {
-    db.execute("SELECT * FROM students", (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json(result);
-    });
-};
 
-// GET STUDENT BY ID
-const stubyID= (req,res)=>{
-    const {id} = req.params;
 
-    db.execute('SELECT * FROM students WHERE id = ?', [id], (err, result) => {
-        if (err) return res.status(500).json(err);
+// UPDATE STUDENT - PUT
+const updateStu = async (req, res) => {
+    try{
+        const { id } = req.params;
+        const {name, email} = req.body;
 
-        if (result.length === 0) {
-            return res.status(404).send("Student not found");
+        const student= await Student.findByPk(id);
+        if(!student){
+           return res.status(404).send("User is not found");
         }
 
-        res.json(result[0]);
-    });
-};
-
-// UPDATE STUDENT
-const updateStu = (req, res) => {
-    const { id } = req.params;
-    const { name, email, age } = req.body;
-
-    const query = "UPDATE students SET name=?, email=?, age=? WHERE id=?";
-
-    db.execute(query, [name, email, age, id], (err, result) => {
-        if (err) return res.status(500).json(err);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).send("Student not found");
-        }
-
-        console.log("Updated student:", id);
-        res.send("Student updated successfully");
-    });
+        student.name = name;
+        student.email = email;
+        
+        await student.save();
+        
+        return res.status(200).send("User has been updated!")
+    }catch(error){
+        res.status(500).send("User cannot be updated");
+    }
 };
 
 
 //DELETE STUDENT
-const stuDelete = (req, res) => {
-    const { id } = req.params;
+const stuDelete = async(req, res) => {
+    try{
+        const {id} = req.params;
+        const student= await Student.destroy({
+            where:{
+                id:id
+            }
+        })
 
-    db.query("DELETE FROM students WHERE id = ?", [id], (err, result) => {
-        if (err) return res.status(500).json(err);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).send("Student not found");
+        if(!student){
+            res.status(404).send('User is not found');
         }
-
-        console.log("Deleted student:", id);
-        res.send("Student deleted successfully");
-    });
+        res.status(200).send('User is deleted');
+    
+    } catch(error){
+        console.log(error);
+        res.status(500).send('Error encountered while deleting.')
+    }
+    
 };
 
 
 module.exports= {
     addStudent,
-    getEntries,
-    stubyID,
     updateStu,
-    stuDelete
+    stuDelete,
+    addingValueToStudentAndIdentityTable
 };

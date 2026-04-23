@@ -1,15 +1,20 @@
-const express = require('express');
-const db = require('./utils/db-connection');
-const stuRoutes = require('./routes/studentsRoutes');
-const app= express();
+ const Student = require('./students');
+ const IdentityCard = require('./identitycard');
+const department = require('./department');
 
-app.use(express.json());
-
-
-
-app.use("/students",stuRoutes);
+ //one to one
+ Student.hasOne(IdentityCard);
+ IdentityCard.belongsTo(Student);
 
 
-app.listen(3000,(err)=>{
-    console.log('Server is running');
-})
+ //one to many
+ department.hasMany(Student);
+ Student.belongsTo(department);
+
+
+
+ module.exports={
+    Student,
+    IdentityCard
+ }
+
